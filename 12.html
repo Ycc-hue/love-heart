@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>❤️ 致特别的你</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #000;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: 'Arial', sans-serif;
+      color: #FF99CC;
+    }
+    .container {
+      position: relative;
+      text-align: center;
+    }
+    .heart {
+      position: absolute;
+      background: #FF99CC;
+      border-radius: 50%;
+      box-shadow: 0 0 10px #FF99CC, 0 0 20px rgba(255, 153, 204, 0.5);
+      transform: translate(-50%, -50%);
+    }
+    .halo {
+      position: absolute;
+      background: rgba(255, 153, 204, 0.3);
+      border-radius: 50%;
+      box-shadow: 0 0 15px #FF99CC;
+      opacity: 0.6;
+      transform: translate(-50%, -50%);
+    }
+    .text {
+      position: absolute;
+      bottom: 60px;
+      width: 100%;
+      font-size: 1.2em;
+      letter-spacing: 2px;
+      animation: glow 2s ease-in-out infinite alternate;
+    }
+    @keyframes glow {
+      from { text-shadow: 0 0 5px #FF99CC; }
+      to { text-shadow: 0 0 20px #FF99CC, 0 0 30px rgba(255, 153, 204, 0.8); }
+    }
+    .title {
+      position: absolute;
+      top: 50px;
+      font-size: 2em;
+      font-weight: bold;
+      letter-spacing: 3px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="title">致刘亚楠</div>
+    <div id="heart-container"></div>
+    <div class="text">❤️ 这颗心只为你跳动 ❤️</div>
+  </div>
+
+  <script>
+    const CANVAS_WIDTH = window.innerWidth * 0.8;
+    const CANVAS_HEIGHT = window.innerHeight * 0.8;
+    const CENTER_X = window.innerWidth / 2;
+    const CENTER_Y = window.innerHeight / 2;
+    const ENLARGE = 11;
+
+    // 数学函数
+    function sin(t) { return Math.sin(t); }
+    function cos(t) { return Math.cos(t); }
+    function pi() { return Math.PI; }
+    function log(x) { return Math.log(x); }
+
+    // 爱心函数（与 Python 一致）
+    function heartFunction(t, shrinkRatio = ENLARGE) {
+      let x = 16 * Math.pow(sin(t), 3);
+      let y = -(13 * cos(t) - 5 * cos(2*t) - 2 * cos(3*t) - cos(4*t));
+      x *= shrinkRatio;
+      y *= shrinkRatio;
+      return {
+        x: x + CENTER_X,
+        y: y + CENTER_Y
+      };
+    }
+
+    // 扰动函数（模拟 scatter_inside）
+    function scatterInside(x, y, beta = 0.15) {
+      const ratioX = -beta * log(Math.random());
+      const ratioY = -beta * log(Math.random());
+      const dx = ratioX * (x - CENTER_X);
+      const dy = ratioY * (y - CENTER_Y);
+      return { x: x - dx, y: y - dy };
+    }
+
+    // 曲线控制跳动节奏
+    function curve(p) {
+      return 2 * (2 * sin(4 * p)) / (2 * pi());
+    }
+
+    // 生成基础爱心点
+    const points = new Set();
+    const edgePoints = [];
+    const centerPoints = [];
+
+    // 构建爱心轮廓点
+    for (let i = 0; i < 2000; i++) {
+      const t = Math.random() * 2 * pi();
+      const { x, y } = heartFunction(t);
+      points.add(`${Math.round(x)},${Math.round(y)}`);
+    }
+
+    // 边缘扩散点
+    Array.from(points).forEach(key => {
+      const [x, y] = key.split(',').map(Number);
+      for (let i = 0; i < 3; i++) {
+        const p = scatterInside(x, y, 0.05);
+        edgePoints.push(p);
+      }
+    });
+
+    // 中心扩散点
+    const pointList = Array.from(points).map(k => k.split(',').map(Number));
+    for (let i = 0; i < 4000; i++) {
+      const [x, y] = pointList[Math.floor(Math.random() * pointList.length)];
+      const p = scatterInside(x, y, 0.17);
+      centerPoints.push(p);
+    }
+
+    // 动画帧缓存
+    const allFrames = [];
+    const FRAME_COUNT = 20;
+
+    for (let frame = 0; frame < FRAME_COUNT; frame++) {
+      const ratio = 10 * curve(frame / 10 * pi());
+      const haloRadius = 4 + 6 * (1 + curve(frame / 10 * pi()));
+      const haloNumber = 3000 + 4000 * Math.abs(Math.pow(curve(frame / 10 * pi()), 2));
+      const framePoints = [];
+
+      // 光晕点
+      for (let i = 0; i < haloNumber; i++) {
+        const t = Math.random() * 2 * pi();
+        const { x, y } = heartFunction(t, 11.6);
+        const dx = (x - CENTER_X) * (haloRadius / 100);
+        const dy = (y - CENTER_Y) * (haloRadius / 100);
+        const hx = x - dx + (Math.random() - 0.5) * 28;
+        const hy = y - dy + (Math.random() - 0.5) * 28;
+        framePoints.push({
+          x: hx,
+          y: hy,
+          size: Math.random() < 0.6 ? 2 : 1,
+          type: 'halo'
+        });
+      }
+
+      // 主体点抖动
+      Array.from(points).forEach(key => {
+        const [x, y] = key.split(',').map(Number);
+        const force = 1 / (Math.pow(Math.pow(x - CENTER_X, 2) + Math.pow(y - CENTER_Y, 2), 0.52));
+        const dx = ratio * force * (x - CENTER_X) + (Math.random() - 0.5);
+        const dy = ratio * force * (y - CENTER_Y) + (Math.random() - 0.5);
+        framePoints.push({
+          x: x - dx,
+          y: y - dy,
+          size: 1 + Math.random() * 2,
+          type: 'heart'
+        });
+      });
+
+      // 边缘扩散点
+      edgePoints.forEach(p => {
+        const { x, y } = p;
+        const force = 1 / (Math.pow(Math.pow(x - CENTER_X, 2) + Math.pow(y - CENTER_Y, 2), 0.52));
+        const dx = ratio * force * (x - CENTER_X);
+        const dy = ratio * force * (y - CENTER_Y);
+        framePoints.push({
+          x: x - dx,
+          y: y - dy,
+          size: 1 + Math.random(),
+          type: 'edge'
+        });
+      });
+
+      // 中心扩散点
+      centerPoints.forEach(p => {
+        const { x, y } = p;
+        const force = 1 / (Math.pow(Math.pow(x - CENTER_X, 2) + Math.pow(y - CENTER_Y, 2), 0.52));
+        const dx = ratio * force * (x - CENTER_X);
+        const dy = ratio * force * (y - CENTER_Y);
+        framePoints.push({
+          x: x - dx,
+          y: y - dy,
+          size: 1 + Math.random(),
+          type: 'center'
+        });
+      });
+
+      allFrames.push(framePoints);
+    }
+
+    // 渲染函数
+    const container = document.getElementById('heart-container');
+    let currentFrame = 0;
+
+    function render() {
+      container.innerHTML = ''; // 清空
+      const frame = allFrames[currentFrame % FRAME_COUNT];
+
+      frame.forEach(p => {
+        const dot = document.createElement('div');
+        dot.className = p.type === 'halo' ? 'halo' : 'heart';
+        dot.style.left = p.x + 'px';
+        dot.style.top = p.y + 'px';
+        dot.style.width = p.size + 'px';
+        dot.style.height = p.size + 'px';
+        container.appendChild(dot);
+      });
+
+      currentFrame++;
+      requestAnimationFrame(render);
+    }
+
+    // 启动动画
+    render();
+
+    // 窗口大小改变时重新计算
+    window.addEventListener('resize', () => {
+      // 可选：重新计算 CENTER_X/Y 等
+    });
+  </script>
+</body>
+</html>
